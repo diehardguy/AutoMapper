@@ -24,21 +24,21 @@ namespace AutoMapper.QueryableExtensions
         /// <param name="expand">Optional Sub Properties to expand</param>
         /// <returns>Expression tree mapping source to destination type</returns>
         public static Expression<Func<TSource, TDestination>> CreateMapExpression<TSource, TDestination>(
-            this IMappingEngine mappingEngine, string expand = null)
+            this IMappingEngine mappingEngine, params string[] membersToExpand)
         {
             TypePair pair;
-            if (expand == null)
+            if (membersToExpand.Length == 0)
             {
                 pair = new TypePair(typeof(TSource), typeof(TDestination));
             }
             else
             {
-                pair = new TypePair(typeof(TSource), typeof(TDestination), expand);
+                pair = new TypePair(typeof(TSource), typeof(TDestination), membersToExpand);
             }
 
             return (Expression<Func<TSource, TDestination>>)
                 _expressionCache.GetOrAdd(pair,
-                    tp => CreateMapExpression(mappingEngine, tp, DictionaryFactory.CreateDictionary<TypePair, int>(), expand));
+                    tp => CreateMapExpression(mappingEngine, tp, DictionaryFactory.CreateDictionary<TypePair, int>(), membersToExpand));
         }
 
 
@@ -72,18 +72,18 @@ namespace AutoMapper.QueryableExtensions
         }
 
         private static LambdaExpression CreateMapExpression(IMappingEngine mappingEngine, TypePair typePair,
-            Internal.IDictionary<TypePair, int> typePairCount, string expand = null)
+            Internal.IDictionary<TypePair, int> typePairCount, params string[] membersToExpand)
         {
             // this is the input parameter of this expression with name <variableName>
             ParameterExpression instanceParameter = Expression.Parameter(typePair.SourceType, "dto");
 
-            var total = CreateMapExpression(mappingEngine, typePair, instanceParameter, typePairCount, expand);
+            var total = CreateMapExpression(mappingEngine, typePair, instanceParameter, typePairCount, membersToExpand);
 
             return Expression.Lambda(total, instanceParameter);
         }
 
         private static Expression CreateMapExpression(IMappingEngine mappingEngine, TypePair typePair, Expression instanceParameter,
-            Internal.IDictionary<TypePair, int> typePairCount, string expand = null)
+            Internal.IDictionary<TypePair, int> typePairCount, params string[] membersToExpand)
         {
             var typeMap = mappingEngine.ConfigurationProvider.FindTypeMapFor(typePair.SourceType,
                 typePair.DestinationType);
@@ -97,7 +97,7 @@ namespace AutoMapper.QueryableExtensions
                 throw new InvalidOperationException(message);
             }
 
-            var bindings = CreateMemberBindings(mappingEngine, typePair, typeMap, instanceParameter, typePairCount, expand);
+            var bindings = CreateMemberBindings(mappingEngine, typePair, typeMap, instanceParameter, typePairCount, membersToExpand);
 
             Expression total = Expression.MemberInit(
                 Expression.New(typePair.DestinationType),
@@ -109,7 +109,7 @@ namespace AutoMapper.QueryableExtensions
 
         private static List<MemberBinding> CreateMemberBindings(IMappingEngine mappingEngine, TypePair typePair,
             TypeMap typeMap,
-            Expression instanceParameter, Internal.IDictionary<TypePair, int> typePairCount, string expand)
+            Expression instanceParameter, Internal.IDictionary<TypePair, int> typePairCount, params string[] membersToExpand)
         {
             var bindings = new List<MemberBinding>();
 
@@ -131,7 +131,8 @@ namespace AutoMapper.QueryableExtensions
                     bindExpression = Expression.Bind(destinationMember, result.ResolutionExpression);
                     bindings.Add(bindExpression);
                 }
-                else if ((!String.IsNullOrEmpty(expand) && expand.Contains(destinationMember.Name)) || !propertyMap.IgnoreProjectionUnlessExpanded)
+                else if ((membersToExpand.Length > 0 &&
+                    membersToExpand.Contains(destinationMember.Name)) || !propertyMap.IgnoreProjectionUnlessExpanded)
                 {
                     if (propertyMap.DestinationPropertyType.GetInterfaces().Any(t => t.Name == "IEnumerable") &&
                      propertyMap.DestinationPropertyType != typeof (string))
@@ -244,7 +245,7 @@ namespace AutoMapper.QueryableExtensions
         /// <typeparam name="TResult">Destination type to map to</typeparam>
         /// <param name="expand">Child Properties that should only be included</param>
         /// <returns>Queryable result, use queryable extension methods to project and execute result</returns>
-        IQueryable<TResult> To<TResult>(string expand);
+        IQueryable<TResult> To<TResult>(params string[] membersToExpand);
     }
 
     public class ProjectionExpression<TSource> : IProjectionExpression
@@ -265,9 +266,9 @@ namespace AutoMapper.QueryableExtensions
             return _source.Select(expr);
         }
 
-        public IQueryable<TResult> To<TResult>(string expand)
+        public IQueryable<TResult> To<TResult>(params string[] membersToExpand)
         {
-            Expression<Func<TSource, TResult>> expr = _mappingEngine.CreateMapExpression<TSource, TResult>(expand);
+            Expression<Func<TSource, TResult>> expr = _mappingEngine.CreateMapExpression<TSource, TResult>(membersToExpand);
 
             return _source.Select(expr);
         }

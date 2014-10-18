@@ -11,22 +11,22 @@
                 _sourceType = sourceType;
                 _destinationType = destinationType;
                 _hashcode = unchecked((_sourceType.GetHashCode() * 397) ^ _destinationType.GetHashCode());
-                _projectionExpandMembers = null;
+                _membersToExpand = null;
             }
 
-            public TypePair(Type sourceType, Type destinationType, string projectionExpandMembers)
+            public TypePair(Type sourceType, Type destinationType, params string[] membersToExpand)
                 : this()
             {
                 _sourceType = sourceType;
                 _destinationType = destinationType;
                 _hashcode = unchecked((_sourceType.GetHashCode() * 397) ^ _destinationType.GetHashCode());
-                _projectionExpandMembers = projectionExpandMembers;
+                _membersToExpand = membersToExpand;
             }
 
             private readonly Type _destinationType;
             private readonly int _hashcode;
             private readonly Type _sourceType;
-            private readonly string _projectionExpandMembers;
+            private readonly string[] _membersToExpand;
 
             public Type SourceType
             {
@@ -38,15 +38,15 @@
                 get { return _destinationType; }
             }
 
-            public string ProjectionExpandMembers
+            public string[] ProjectionExpandMembers
             {
-                get { return _projectionExpandMembers; }
+                get { return _membersToExpand; }
 
             }
 
             public bool Equals(TypePair other)
             {
-                return Equals(other._sourceType, _sourceType) && Equals(other._destinationType, _destinationType) && Equals(other.ProjectionExpandMembers, _projectionExpandMembers);
+                return Equals(other._sourceType, _sourceType) && Equals(other._destinationType, _destinationType) && Equals(other.ProjectionExpandMembers, _membersToExpand);
             }
 
             public override bool Equals(object obj)
